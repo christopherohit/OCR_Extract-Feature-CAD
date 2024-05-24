@@ -1,0 +1,6 @@
+gfpgan/weights/
+GFPGAN/experiments/
+tmpFile/*
+__pypackages__/
+__pycache__/
+.ipynb_checkpoints
