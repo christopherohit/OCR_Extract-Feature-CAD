@@ -1,0 +1,12 @@
+names:
+- CAD
+nc: 1
+roboflow:
+  license: CC BY 4.0
+  project: cad_detect
+  url: https://universe.roboflow.com/convertdata/cad_detect/dataset/4
+  version: 4
+  workspace: convertdata
+test: ../test/images
+train: CAD_Detect-4/train/images
+val: CAD_Detect-4/valid/images

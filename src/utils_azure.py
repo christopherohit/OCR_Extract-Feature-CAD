@@ -155,6 +155,25 @@ def ocr_azure_cad(image_pil: Image, computervision_client: ComputerVisionClient)
     return words, boxes
 
 def public_ocr_cad_apis(image_path: str,  det_draw_model: YOLO, det_code_model: YOLO) -> Tuple[dict, dict]:
+    """
+    This Python function `public_ocr_cad_apis` runs OCR-CAD on an image to extract basic and drawing
+    information using Azure Cognitive Services.
+    
+    :param image_path: The `image_path` parameter in the `public_ocr_cad_apis` function is a string that
+    represents the path to the image file that will be processed by the OCR-CAD APIs. This function runs
+    OCR-CAD on the provided image to extract information related to drawings and codes
+    :type image_path: str
+    :param det_draw_model: The `det_draw_model` parameter in the `public_ocr_cad_apis` function is
+    likely referring to a model used for detecting and localizing drawings in an image. This model is
+    most likely based on the YOLO (You Only Look Once) architecture, which is a popular object
+    :type det_draw_model: YOLO
+    :param det_code_model: The `det_code_model` parameter in the `public_ocr_cad_apis` function is
+    expected to be an object of the YOLO class. This model is used for detecting and extracting
+    code-related information from the input image during the OCR-CAD process
+    :type det_code_model: YOLO
+    :return: The function `public_ocr_cad_apis` is returning a tuple containing two dictionaries:
+    `basic_info_dict` and `draw_information_dict`.
+    """
     """Run OCR-CAD the draw
 
     Args:
@@ -200,3 +219,6 @@ def public_ocr_cad_apis(image_path: str,  det_draw_model: YOLO, det_code_model: 
 
     basic_info_dict.pop('ocr')
     return basic_info_dict, draw_information_dict
+
+def process_by_batch_size():
+    pass

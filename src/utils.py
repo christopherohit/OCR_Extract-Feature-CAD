@@ -1,8 +1,6 @@
-<<<<<<< HEAD
 from PIL import Image
-=======
 from PIL import Image, ImageDraw
->>>>>>> 8e8f915 (Full pipeline (non batch size LLM))
+
 from typing import List, Tuple, Dict
 from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import OperationStatusCodes
@@ -10,8 +8,8 @@ import io
 import pandas as pd
 from ultralytics import YOLO
 import cv2
-<<<<<<< HEAD
-=======
+
+
 from basicsr.utils import imwrite
 import glob
 import numpy as np
@@ -26,56 +24,49 @@ from realesrgan import RealESRGANer
 
 import math
 import regex
->>>>>>> 8e8f915 (Full pipeline (non batch size LLM))
+
 
 
 def load_image(image_path: str) -> Image:
     """
     This function loads an image from a specified path and converts it to a Pillow image in RGB format.
     
-    :param image_path: The `image_path` parameter in the `load_image` function is a string that
-    represents the path to the image file that you want to load as a Pillow image. This path should
-    point to the location of the image file on your filesystem
-    :type image_path: str
-    :return: a Pillow image object.
-    """
-    """Load image path to pillow image
-
     Args:
-        image_path (str):  path to image
-
+        image_path (str) : The `image_path` parameter in the `load_image` function is a string that
+        represents the path to the image file that you want to load as a Pillow image. This path should
+        point to the location of the image file on your filesystem
     Returns:
-        Image: pillow image
+        Image: The function returns a Pillow image object in RGB format.
     """
+
     image_pil = Image.open(image_path).convert('RGB')
     
     return image_pil
 
+
 def cvrt_point_bb(points: List) -> List:
     """
-<<<<<<< HEAD
-=======
+
+
     This Python function converts a list of points to a bounding box by extracting x and y coordinates
     and finding the minimum and maximum values for each.
     
-    :param points: It seems like you have not provided the actual list of points that you want to
-    convert to a bounding box. Could you please provide the list of points so that I can assist you in
-    converting them to a bounding box using the `cvrt_point_bb` function?
-    :type points: List
-    :return: The function `cvrt_point_bb` is returning a list that represents a bounding box. The list
-    contains the minimum x-coordinate, minimum y-coordinate, maximum x-coordinate, and maximum
-    y-coordinate of the points provided as input.
-    """
-    """
->>>>>>> 8e8f915 (Full pipeline (non batch size LLM))
-    Converts a list of points to a bounding box
+    Args:
+        points (list): It seems like you have not provided the actual list of points that you want to
+        convert to a bounding box. Could you please provide the list of points so that I can assist you in
+        converting them to a bounding box using the `cvrt_point_bb` function?
+    
+    Return:
+        The function `cvrt_point_bb` is returning a list that represents a bounding box. The list
+        contains the minimum x-coordinate, minimum y-coordinate, maximum x-coordinate, and maximum
+        y-coordinate of the points provided as input.
     """
     x_coords = [int(x) for idx, x in enumerate(points) if idx % 2 == 0]
     y_coords = [int(y) for idx, y in enumerate(points) if idx % 2!= 0]
 
     return [min(x_coords), min(y_coords), max(x_coords), max(y_coords)]
 
-<<<<<<< HEAD
+
 def ocr_azure_cad(image_pil: Image, computervision_client: ComputerVisionClient) -> Tuple[List, List]:
     def cvrt_point_bb(points):
         """
@@ -120,101 +111,80 @@ def ocr_azure_cad(image_pil: Image, computervision_client: ComputerVisionClient)
     return words, boxes
 
 def load_yolo(model_path: str) -> YOLO:
-=======
-def load_yolo(model_path: str) -> YOLO:
     """
     This Python function loads a YOLO model from a specified path and returns it.
     
-    :param model_path: The `model_path` parameter in the `load_yolo` function is a string that
-    represents the file path to the YOLO model that you want to load. This model will be used for object
-    detection tasks
-    :type model_path: str
-    :return: An instance of the YOLO class initialized with the model located at the specified
-    `model_path` is being returned.
+    Args:
+        model_path (str): The `model_path` parameter in the `load_yolo` function is a string that
+        represents the file path to the YOLO model that you want to load. This model will be used for object
+        detection tasks
+    
+    Return: 
+        An instance of the YOLO class initialized with the model located at the specified
+        `model_path` is being returned.
     """
->>>>>>> 8e8f915 (Full pipeline (non batch size LLM))
+
     det_model = YOLO(model_path)
     
     return det_model
 
 def yolo_inference(image_pil: Image, model_detect: YOLO, type: str) -> pd.DataFrame:
-<<<<<<< HEAD
-=======
+
     """
+    Object detection by Yolov8
     This Python function `yolo_inference` performs object detection using YOLOv8 on a given image and
     returns the detection results in a pandas DataFrame.
-    
-    :param image_pil: The `image_pil` parameter is a Pillow image object representing the image on which
-    you want to perform object detection using YOLOv8. This image will be passed to the YOLO model for
-    inference
-    :type image_pil: Image
-    :param model_detect: The `model_detect` parameter in the `yolo_inference` function is expected to be
-    an instance of the YOLO model class. This model is used for object detection using YOLOv8 algorithm
-    :type model_detect: YOLO
-    :param type: The `type` parameter in the `yolo_inference` function is used to specify the type of
-    object for which you want to perform detection. It is a string parameter that can have different
-    values based on the type of object you want to detect. In the provided code snippet, if the `
-    :type type: str
-    :return: A pandas DataFrame containing the detection results is being returned. The DataFrame
-    includes information about the detected objects such as their bounding boxes and class labels.
-    """
->>>>>>> 8e8f915 (Full pipeline (non batch size LLM))
-    """Object detection by Yolov8
 
     Args:
-        image_pil (Image): pillow image
-        model_detect (YOLO): model detect
-        type (str): type of object
+        image_pil (Image): is a Pillow image object representing the image on which
+        you want to perform object detection using YOLOv8. This image will be passed to the YOLO model for
+        inference
+
+        model_detect (YOLO): is expected to be an instance of the YOLO model class. This model is used for object detection using YOLOv8 algorithm
+        
+        type (str): is used to specify the type of object for which you want to perform detection. It is a string parameter that can have different
+        values based on the type of object you want to detect. In the provided code snippet, if the `
+
 
     Returns:
-        pd.DataFrame: detect result
+        pd.DataFrame: A pandas DataFrame containing the detection results is being returned. The DataFrame
+        includes information about the detected objects such as their bounding boxes and class labels.
+
     """
-<<<<<<< HEAD
-    results = model_detect.predict(source=image_pil, verbose=False)
-    if type == 'code':
-=======
     
     if type == 'code':
-        results = model_detect.predict(source=image_pil, verbose=False, conf = 0.5)
->>>>>>> 8e8f915 (Full pipeline (non batch size LLM))
+        results = model_detect.predict(source=image_pil, verbose=False, conf = 0.3)
+
         detect_df = pd.DataFrame({"boxes": results[0].boxes.xyxy.tolist(), "cls": results[0].boxes.cls.tolist()})
         detect_df['boxes'] = detect_df['boxes'].apply(lambda x: list(map(int, x)))
         detect_df['angle'] = detect_df['cls'].apply(lambda c: int(results[0].names[c]))
     else:
-<<<<<<< HEAD
-=======
+
+
         results = model_detect.predict(source=image_pil, verbose=False, conf = 0.7)
->>>>>>> 8e8f915 (Full pipeline (non batch size LLM))
+
         detect_df = pd.DataFrame({"boxes": results[0].boxes.xyxy.tolist(), "cls": results[0].boxes.cls.tolist()})
         detect_df['boxes'] = detect_df['boxes'].apply(lambda x: list(map(int, x)))
     
     return detect_df
 
 def calc_ovl(box_small: List, box_large: List) -> float:
-<<<<<<< HEAD
-=======
+
+
     """
     The function `calc_ovl` calculates the Intersection over Union (IoU) score between two bounding
     boxes.
-    
-    :param box_small: xmin, ymin, xmax, ymax of the smaller box
-    :type box_small: List
-    :param box_large: box_large is a list containing the coordinates of a larger bounding box. The
-    coordinates represent the top-left (xmin, ymin) and bottom-right (xmax, ymax) corners of the
-    bounding box
-    :type box_large: List
-    :return: The function `calc_ovl` returns the Intersection over Small Area (ios) score, which is
-    calculated as the Intersection over Union (IoU) between two bounding boxes.
-    """
->>>>>>> 8e8f915 (Full pipeline (non batch size LLM))
-    """Calculate 
 
     Args:
-        box_small (List): xmin, ymin, xmax, ymax
-        box_large (List): xmin, ymin, xmax, ymax
-
+        box_small (list) : xmin, ymin, xmax, ymax of the smaller box
+        
+        box_large (list) : box_large is a list containing the coordinates of a larger bounding box. The
+        coordinates represent the top-left (xmin, ymin) and bottom-right (xmax, ymax) corners of the
+        bounding box
     Returns:
-        float: ios (intersec on small area) score
+        The function `calc_ovl` returns the Intersection over Small Area (ios) score, which is
+        calculated as the Intersection over Union (IoU) between two bounding boxes.
+        float: ios (intersec on small area) score    
     """
     try:
         # Extract coordinates
@@ -289,8 +259,8 @@ def detect_circle(image_pil: Image, is_display=False) -> List[int]:
         return circle_box
     else:
         return []
-<<<<<<< HEAD
-=======
+
+
 
 def split_images(raw_image_pil: Image, data_df: pd.DataFrame) -> Tuple[Image.Image, List]:
     """The `split_images` function takes in a raw image (as a PIL Image object) and a DataFrame containing bounding box information. It then splits the image into two parts: a basic image and a list of cropped images.
@@ -327,22 +297,24 @@ def get_cell_size(detect_df: pd.DataFrame, offset: int=7) -> Tuple[int]:
     This function calculates the size of cells based on bounding box dimensions and angles in a
     DataFrame.
     
-    :param detect_df: `detect_df` is a pandas DataFrame containing detection data with columns like
-    'boxes' and 'angle'. The 'boxes' column contains coordinates of bounding boxes in the format [x_min,
-    y_min, x_max, y_max], and the 'angle' column contains the angle of rotation for each
-    :type detect_df: pd.DataFrame
-    :param offset: The `offset` parameter in the `get_cell_size` function is used to add or subtract a
-    specified value from the bounding box coordinates. In this case, the offset value is set to 7. This
-    offset helps in adjusting the size of the bounding box for each detected object in the `detect,
-    defaults to 7
-    :type offset: int (optional)
-    :return: The function `get_cell_size` returns a tuple containing the number of cells (`num_cell`),
-    the maximum width (`max_width`), and the maximum height (`max_height`) calculated based on the input
-    DataFrame `detect_df` and the offset value.
+    Args:
+        detect_df (pd.DataFrame): `detect_df` is a pandas DataFrame containing detection data with columns like
+        'boxes' and 'angle'. The 'boxes' column contains coordinates of bounding boxes in the format [x_min,
+        y_min, x_max, y_max], and the 'angle' column contains the angle of rotation for each
+        
+        offset (int) : The `offset` parameter in the `get_cell_size` function is used to add or subtract a
+        specified value from the bounding box coordinates. In this case, the offset value is set to 7. This
+        offset helps in adjusting the size of the bounding box for each detected object in the `detect,
+        defaults to 7
+    
+    Returns:
+        The function `get_cell_size` returns a tuple containing the number of cells (`num_cell`),
+        the maximum width (`max_width`), and the maximum height (`max_height`) calculated based on the input
+        DataFrame `detect_df` and the offset value.
     """
     max_width = 0
     max_height = 0
-    offset = 7
+    offset = 10
     for det_idx, det_data in detect_df.iterrows():
         tmp_box = [int(det_data.boxes[0]) - offset,
                    int(det_data.boxes[1]) - offset,
@@ -360,7 +332,7 @@ def get_cell_size(detect_df: pd.DataFrame, offset: int=7) -> Tuple[int]:
             max_width = max(max_width, box_w)
             max_height = max(max_height, box_h)
     
-    num_cell = math.ceil(math.sqrt(len(detect_df)))
+    num_cell = math.ceil(math.sqrt(len(detect_df))) + 1
     
     return num_cell, max_width, max_height
 
@@ -369,40 +341,31 @@ def gen_grid_image(draw_image_pil: Image, detect_df: pd.DataFrame, num_cell: int
     This function generates a concatenated image grid by cropping and rotating images based on detection
     data.
     
-    :param draw_image_pil: The `draw_image_pil` parameter is a Pillow image that will be used for
-    cropping and pasting onto the concatenated image
-    :type draw_image_pil: Image
-    :param detect_df: The `detect_df` parameter is a pandas DataFrame containing detection data. It
-    likely includes information about detected objects or regions in an image, such as bounding box
-    coordinates and angles
-    :type detect_df: pd.DataFrame
-    :param num_cell: The `num_cell` parameter represents the number of cells in each row and column of
-    the grid. It is used to determine how many images will be concatenated horizontally and vertically
-    in the final grid image
-    :type num_cell: int
-    :param max_width: The `max_width` parameter in the `gen_grid_image` function represents the maximum
-    width of each cell in the grid when concatenating pillow images
-    :type max_width: int
-    :param max_height: The `max_height` parameter in the `gen_grid_image` function represents the
-    maximum height of each cell in the grid when concatenating multiple images. It is used to determine
-    the size of each cell in the final concatenated image grid
-    :type max_height: int
-    :return: The function `gen_grid_image` returns a concatenated image created by pasting cropped and
-    rotated images from the `draw_image_pil` based on the data in the `detect_df` DataFrame. The images
-    are arranged in a grid pattern specified by the `num_cell`, `max_width`, and `max_height`
-    parameters. The final concatenated image with outlined rectangles is returned.
-    """
-    """Concatenate pillow images
-
     Args:
-        draw_image_pil (Image): pillow image
-        detect_df (pd.DataFrame): detect data
-        num_cell (int): _description_
-        max_width (int): _description_
-        max_height (int): _description_
+        draw_image_pil (PIL.Image) : The `draw_image_pil` parameter is a Pillow image that will be used for
+        cropping and pasting onto the concatenated image
 
-    Returns:
-        Image: Concatenate image
+        detect_df (pd.DataFrame) : The `detect_df` parameter is a pandas DataFrame containing detection data. It
+        likely includes information about detected objects or regions in an image, such as bounding box
+        coordinates and angles
+
+        num_cell (int) : The `num_cell` parameter represents the number of cells in each row and column of
+        the grid. It is used to determine how many images will be concatenated horizontally and vertically
+        in the final grid image
+
+        max_width (int) : The `max_width` parameter in the `gen_grid_image` function represents the maximum
+        width of each cell in the grid when concatenating pillow images
+
+        max_height (int) : The `max_height` parameter in the `gen_grid_image` function represents the
+        maximum height of each cell in the grid when concatenating multiple images. It is used to determine
+        the size of each cell in the final concatenated image grid
+    
+    Return:
+
+        The function `gen_grid_image` returns a concatenated image created by pasting cropped and
+        rotated images from the `draw_image_pil` based on the data in the `detect_df` DataFrame. The images
+        are arranged in a grid pattern specified by the `num_cell`, `max_width`, and `max_height`
+        parameters. The final concatenated image with outlined rectangles is returned.
     """
 
     concat_image_width = num_cell * max_width
@@ -443,18 +406,22 @@ def get_floor_index(draw_box: List, ocr_dict: Dict) -> str:
     This function takes a list of bounding boxes and an OCR dictionary, extracts relevant information,
     and returns the floor index as a string.
     
-    :param draw_box: It seems like you were about to provide some information about the `draw_box`
-    parameter, but the information is missing. Could you please provide more details or an example of
-    what the `draw_box` parameter represents in your code?
-    :type draw_box: List
-    :param ocr_dict: ocr_dict is a dictionary containing OCR (Optical Character Recognition) results,
-    where the keys are column names and the values are lists of OCR results. The OCR results typically
-    include information such as the detected words, bounding boxes, and other relevant data extracted
-    from an image or document
-    :type ocr_dict: Dict
-    :return: The function `get_floor_index` returns a string that represents the floor index. The floor
-    index is extracted from the OCR data based on the provided conditions and is returned with the
-    suffix "F".
+    Args:
+
+        draw_box (list) : It seems like you were about to provide some information about the `draw_box`
+        parameter, but the information is missing. Could you please provide more details or an example of
+        what the `draw_box` parameter represents in your code?
+
+        ocr_dict (dict) : ocr_dict is a dictionary containing OCR (Optical Character Recognition) results,
+        where the keys are column names and the values are lists of OCR results. The OCR results typically
+        include information such as the detected words, bounding boxes, and other relevant data extracted
+        from an image or document
+
+    Returns:
+
+        The function `get_floor_index` returns a string that represents the floor index. The floor
+        index is extracted from the OCR data based on the provided conditions and is returned with the
+        suffix "F".
     """
     ocr_df = pd.DataFrame(ocr_dict)
     ocr_df[['xmin', 'xmax', 'ymin', 'ymax']] = ocr_df['boxes'].tolist()
@@ -473,51 +440,55 @@ def mapping_code(raw_image_pil: Image, words: List, boxes: List, det_df: pd.Data
     The function `mapping_code` processes image data and OCR results to extract digit codes and
     corresponding notes for each cell in a grid.
     
-    :param raw_image_pil: The `raw_image_pil` parameter is expected to be an image in PIL (Python
-    Imaging Library) format. This image will be used for cropping and processing in the `mapping_code`
-    function
-    :type raw_image_pil: Image
-    :param words: The `words` parameter in the `mapping_code` function is a list containing the words
-    detected in the image. These words are extracted during optical character recognition (OCR)
-    processing of the image
-    :type words: List
-    :param boxes: The `boxes` parameter in the `mapping_code` function is a list containing bounding
-    boxes for each word detected in the OCR process. Each bounding box is represented as a list of four
-    values `[xmin, xmax, ymin, ymax]`, where `xmin` and `ymin` represent the coordinates
-    :type boxes: List
-    :param det_df: The `det_df` parameter in the `mapping_code` function seems to be a DataFrame that
-    contains information about the detected objects in the image. It likely includes columns such as
-    'angle' and 'boxes' which provide details about the orientation and bounding boxes of the detected
-    objects
-    :type det_df: pd.DataFrame
-    :param num_cell: The `num_cell` parameter in the `mapping_code` function represents the number of
-    cells in both the horizontal and vertical directions that you want to divide the image into. This
-    parameter is used to iterate over each cell in the image and perform certain operations within each
-    cell
-    :type num_cell: int
-    :param cell_width: The `cell_width` parameter in the `mapping_code` function represents the width of
-    each cell in the grid where the image is divided. This value is used to calculate the location and
-    size of the cropped images within each cell during the processing of the OCR (Optical Character
-    Recognition) and object detection
-    :type cell_width: int
-    :param cell_height: The `cell_height` parameter in the `mapping_code` function represents the height
-    of each cell in the grid where the image is divided. This value is used to calculate the dimensions
-    of each cell in the grid based on the provided `cell_width` and to position the cropped images
-    correctly within each cell
-    :type cell_height: int
-    :param offset: The `offset` parameter in the `mapping_code` function is used to specify the
-    additional padding (in pixels) to be added or subtracted from the bounding box coordinates when
-    cropping the image. This padding helps in ensuring that the cropped region includes the entire
-    object of interest and some surrounding context for better, defaults to 5
-    :type offset: int (optional)
-    :param is_display: The `is_display` parameter in the `mapping_code` function is a boolean flag that
-    determines whether to display the extracted code and note information during the processing of each
-    cell. If set to `True`, the function will print out the code and note information for each cell as
-    it processes them. If, defaults to False
-    :type is_display: bool (optional)
-    :return: The function `mapping_code` returns a dictionary with two keys:
-    1. 'digit_code': A list of integer values extracted from the code strings processed in the function.
-    2. 'code': A list of strings representing notes extracted from the processed data.
+    Args:
+
+        raw_image_pil (PIL.Image) : The `raw_image_pil` parameter is expected to be an image in PIL (Python
+        Imaging Library) format. This image will be used for cropping and processing in the `mapping_code`
+        function
+
+        words (list) : The `words` parameter in the `mapping_code` function is a list containing the words
+        detected in the image. These words are extracted during optical character recognition (OCR)
+        processing of the image
+
+        boxes (list) : The `boxes` parameter in the `mapping_code` function is a list containing bounding
+        boxes for each word detected in the OCR process. Each bounding box is represented as a list of four
+        values `[xmin, xmax, ymin, ymax]`, where `xmin` and `ymin` represent the coordinates
+
+        det_df (pd.DataFrame) : The `det_df` parameter in the `mapping_code` function seems to be a DataFrame that
+        contains information about the detected objects in the image. It likely includes columns such as
+        'angle' and 'boxes' which provide details about the orientation and bounding boxes of the detected
+        objects
+
+        num_cell (int) : The `num_cell` parameter in the `mapping_code` function represents the number of
+        cells in both the horizontal and vertical directions that you want to divide the image into. This
+        parameter is used to iterate over each cell in the image and perform certain operations within each
+        cell
+
+        cell_width (int) : The `cell_width` parameter in the `mapping_code` function represents the width of
+        each cell in the grid where the image is divided. This value is used to calculate the location and
+        size of the cropped images within each cell during the processing of the OCR (Optical Character
+        Recognition) and object detection
+
+        cell_height (int) : The `cell_height` parameter in the `mapping_code` function represents the height
+        of each cell in the grid where the image is divided. This value is used to calculate the dimensions
+        of each cell in the grid based on the provided `cell_width` and to position the cropped images
+        correctly within each cell
+
+        offset (int) : The `offset` parameter in the `mapping_code` function is used to specify the
+        additional padding (in pixels) to be added or subtracted from the bounding box coordinates when
+        cropping the image. This padding helps in ensuring that the cropped region includes the entire
+        object of interest and some surrounding context for better, defaults to 5
+
+        is_display (bool) : The `is_display` parameter in the `mapping_code` function is a boolean flag that
+        determines whether to display the extracted code and note information during the processing of each
+        cell. If set to `True`, the function will print out the code and note information for each cell as
+        it processes them. If, defaults to False
+
+    Return:
+        A dictionary where the keys are the cell coordinates (as a tuple of (row, column))
+        The function `mapping_code` returns a dictionary with two keys:
+        1. 'digit_code': A list of integer values extracted from the code strings processed in the function.
+        2. 'code': A list of strings representing notes extracted from the processed data.
     """
     
     code_ocr_df = pd.DataFrame({"words": words, "boxes": boxes})
@@ -674,16 +645,21 @@ def convert_from_image_to_cv2(img: Image) -> np.ndarray:
     # return np.asarray(img)
     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR, cv2.IMREAD_COLOR)
             
-def super_restore_resolution(list_image_path, restorer,is_saved=True, des_path= ''):
+def super_restore_resolution(list_image_path: str, restorer,is_saved: bool = True, des_path: str = ''):
     """
     This Python function takes a list of image paths, applies a restoration process using a provided
     restorer, and saves the restored images in a specified directory.
     
-    :param list_image_path: The `list_image_path` parameter is the path to the directory containing the
-    images that you want to restore
-    :param restorer: The `restorer` parameter in the `super_restore_resolution` function seems to be an
-    object that has an `enhance` method. This method is used to enhance an input image based on certain
-    parameters like `has_aligned`, `only_center_face`, `paste_back`, and `weight`
+    Args:
+        list_image_path (str) : The `list_image_path` parameter is the path to the directory containing the
+        images that you want to restore
+        
+        restorer (model GFP GAN) : The `restorer` parameter in the `super_restore_resolution` function seems to be an
+        object that has an `enhance` method. This method is used to enhance an input image based on certain
+    
+        is_saved (bool) : Saved image to diretory
+        
+        des_path (str) : The `des_path` parameter in the `super_restore_resolution`
     """
     if is_saved == False:
         input_img = convert_from_image_to_cv2(list_image_path)
@@ -805,8 +781,49 @@ def process_code_cad_2(str_code: str = '', list_sample: list = []):
         return result
 
 
-def reconfig_list(str_process: list = []):
+def reconfig_list(str_process: list = []) -> Tuple[int,str]:
+    """
+    The function `reconfig_list` takes a list of strings as input, converts the first string to an
+    integer using a helper function, and reformats the second string before returning a tuple of the
+    integer and the reformatted string.
+    
+    Args:
+
+        str_process (list) : The `str_process` parameter is a list that contains two elements. The first
+        element is a string that represents a parentheses string that needs to be converted to an integer.
+        The second element is a string that represents code that needs to be reformatted. The function
+        `reconfig_list` takes this list
+    Return:
+
+        A tuple containing an integer and a string is being returned.
+    """
     idx_int = convert_parentheses_string_to_int(str_process[0])
     code = reformat_code(str_process[1])
     return idx_int, code
->>>>>>> 8e8f915 (Full pipeline (non batch size LLM))
+
+
+def upscale_image(image_path: str, restorer,is_saved: bool = True, des_path: str = ''):
+
+
+    img_name = os.path.basename(image_path)
+    # print(f'Processing {img_name} ...')
+    basename, ext = os.path.splitext(img_name)
+    input_img = cv2.imread(image_path, cv2.IMREAD_COLOR)
+
+    # restore all component if necessary
+    _, _, restored_img = restorer.enhance(
+        input_img,
+        has_aligned= False,
+        only_center_face= False,
+        paste_back= True,
+        weight= 0.5)
+    
+    if restored_img is not None:
+        if ext == 'auto':
+            extension = 'png'
+        else:
+            extension = ext
+        save_restore_path = os.path.join(f'{des_path}', f"{basename}{extension}")
+        imwrite(restored_img, save_restore_path)
+    print("Done")
+    return save_restore_path
