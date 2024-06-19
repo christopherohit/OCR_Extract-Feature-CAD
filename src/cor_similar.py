@@ -1,7 +1,7 @@
 from strsimpy import *
 import pandas as pd
 from difflib import SequenceMatcher
-
+import math
 
 def similar_normalized_levenshtein(str_1: str = '', str_2: str = ''):
     """
@@ -156,8 +156,46 @@ def select_feature_from_dataframe(df_metric: pd.DataFrame = ''):
     return id_minium_gram
 
 
+def distance_to_bbox(point, bbox):
+    px, py = point
+    xmin, ymin, xmax, ymax = bbox
     
-
-
+    if px < xmin:
+        dx = xmin - px
+    elif px > xmax:
+        dx = px - xmax
+    else:
+        dx = 0
     
+    if py < ymin:
+        dy = ymin - py
+    elif py > ymax:
+        dy = py - ymax
+    else:
+        dy = 0
+    
+    return math.sqrt(dx*dx + dy*dy)
+
+def find_nearest_and_second_nearest_bbox(point, bbox_list):
+    if not bbox_list or len(bbox_list) < 2:
+        return None, None
+    
+    min_distance = float('inf')
+    second_min_distance = float('inf')
+    nearest_bbox = None
+    second_nearest_bbox = None
+    
+    for bbox in bbox_list:
+        distance = distance_to_bbox(point, bbox)
+        
+        if distance < min_distance:
+            second_min_distance = min_distance
+            min_distance = distance
+            second_nearest_bbox = nearest_bbox
+            nearest_bbox = bbox
+        elif distance < second_min_distance:
+            second_min_distance = distance
+            second_nearest_bbox = bbox
+    
+    return nearest_bbox, second_nearest_bbox
 
