@@ -14,3 +14,4 @@ temp/*
 Dockerfile*
 assets/*
 data/*
+weight/*

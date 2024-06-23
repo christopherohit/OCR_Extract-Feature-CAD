@@ -3,7 +3,7 @@ from src.utils import load_image
 import time
 
 main_process = OCR(env_path='.env', gpf_path= 'GFPGAN/experiments/pretrained_models/GFPGANv1.3.pth',
-                   draw_path='weight/best_draw.pt', core_path= 'weight/best_code.pt', dict_path = 'weight/dict.pkl')
+                   draw_path='weight/best_draw.pt', core_path= 'weight/v10x_1280.pt', dict_path = 'weight/dict.pkl')
 
 
 file = 'outfile5.png'
