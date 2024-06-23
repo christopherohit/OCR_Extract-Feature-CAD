@@ -9,7 +9,7 @@ import pandas as pd
 from ultralytics import YOLO
 import cv2
 
-
+import re
 from basicsr.utils import imwrite
 import glob
 import numpy as np
@@ -153,7 +153,7 @@ def yolo_inference(image_pil: Image, model_detect: YOLO, type: str) -> pd.DataFr
     """
     
     if type == 'code':
-        results = model_detect.predict(source=image_pil, verbose=False, conf = 0.3)
+        results = model_detect.predict(source=image_pil, verbose=False)
 
         detect_df = pd.DataFrame({"boxes": results[0].boxes.xyxy.tolist(), "cls": results[0].boxes.cls.tolist()})
         detect_df['boxes'] = detect_df['boxes'].apply(lambda x: list(map(int, x)))
@@ -435,7 +435,7 @@ def get_floor_index(draw_box: List, ocr_dict: Dict) -> str:
 
 
 def mapping_code(raw_image_pil: Image, words: List, boxes: List, det_df: pd.DataFrame, 
-                 num_cell: int, cell_width: int, cell_height: int, offset: int=5, is_display: bool=False) -> Dict:
+                 num_cell: int, cell_width: int, cell_height: int, offset: int=10, is_display: bool=True) -> Dict:
     """
     The function `mapping_code` processes image data and OCR results to extract digit codes and
     corresponding notes for each cell in a grid.
@@ -820,10 +820,102 @@ def upscale_image(image_path: str, restorer,is_saved: bool = True, des_path: str
     
     if restored_img is not None:
         if ext == 'auto':
-            extension = 'png'
+            extension = 'jpg'
         else:
             extension = ext
         save_restore_path = os.path.join(f'{des_path}', f"{basename}{extension}")
         imwrite(restored_img, save_restore_path)
     print("Done")
     return save_restore_path
+
+def combine_rephrase_dict(dict_result: Dict = {}) -> Dict:
+    """
+    (NON FILL MISSING !!!!!!!!)
+    This function takes a dictionary with 'digit_code' and 'code' keys, pairs up the elements of the two
+    lists, sorts the pairs based on the first element, and then refines the output by creating a new
+    dictionary with the sorted pairs.
+    
+    Args:
+        dict_result (Dict) : It looks like you have a function `combine_rephrase_dict` that takes a
+        dictionary `dict_result` as input. The function pairs up the elements of two lists within the
+        dictionary, sorts the pairs based on the first element, and then separates them back into two lists.
+        Finally, it refines
+    
+    Return:
+        The function `combine_rephrase_dict` is returning the original input dictionary
+        `dict_result`.
+    """
+    list_ids = dict_result['digit_code']
+    list_code = dict_result['code']
+
+    # Pair up the elements of the two lists
+    paired_list = list(zip(list_ids,list_code))
+
+    # Sort the pairs based on the first element
+    paired_list.sort(key=lambda x: x[0])
+
+    # Separate the sorted pairs back into two lists
+    list_ids, list_code = zip(*paired_list)
+    dict_refine= {}
+    # Convert the lists back to lists (since zip returns tuples)
+    list_ids = list(list_ids)
+    list_code = list(list_code)
+    for i in tqdm(range(len(list_code)), desc= "Refining ouput"):
+        dict_refine[f"{list_ids[i]}"] = list_code[i]
+    return dict_result
+
+def combine_rephrase_dict_2(dict_result: Dict = {}) -> Dict:
+    """
+    (HAVE FILL MISSING !!!!!!!)
+    The function `combine_rephrase_dict_2` takes a dictionary with 'digit_code' and 'code' lists, pairs
+    and sorts the elements based on 'digit_code', and creates a refined dictionary with consecutive keys
+    from the minimum to maximum 'digit_code' values.
+    
+    Args:
+        dict_result (Dict) : The function `combine_rephrase_dict_2` takes a dictionary `dict_result` as
+        input, which should contain two keys: 'digit_code' and 'code'. The value corresponding to
+        'digit_code' should be a list of digit codes, and the value corresponding to 'code' should be
+        a list of corresponding codes.
+    
+    Return:
+        The function `combine_rephrase_dict_2` returns a dictionary `dict_refine` that contains
+        refined output based on the input dictionary `dict_result`. The dictionary `dict_refine` is created
+        by pairing up elements from the 'digit_code' and 'code' lists in the input dictionary, sorting them
+        based on the 'digit_code', and then creating a new dictionary where keys are sequential integers
+    """
+    list_ids = dict_result['digit_code']
+    list_code = dict_result['code']
+
+    # Pair up the elements of the two lists
+    paired_list = list(zip(list_ids, list_code))
+
+    # Sort the pairs based on the first element
+    paired_list.sort(key=lambda x: x[0])
+
+    list_ids, list_code = zip(*paired_list)
+
+    # Separate the sorted pairs back into two lists
+    list_ids, list_code = zip(*paired_list)
+
+    dict_refine = {}
+    min_id = min(list_ids)
+    max_id = max(list_ids)
+
+    for i in tqdm(range(min_id, max_id + 1), desc="Refining output"):
+        if i in list_ids:
+            dict_refine[i] = list_code[list_ids.index(i)]
+        else:
+            dict_refine[i] = ""
+
+    return dict_refine
+# def save_to_path(file):
+    
+def preprocessing_str(basic_info_dict: Dict = {}) -> Dict:
+    if 'Ⅶ' in basic_info_dict['construct_type'][0] or 'VII' in basic_info_dict['construct_type'][0]:
+        if "Ⅶ" in basic_info_dict['construct_type'][0]:
+            basic_info_dict['construct_type'][0] = basic_info_dict['construct_type'][0].replace('Ⅶ', 'VII')
+        basic_info_dict['construct_type'] = basic_info_dict['construct_type'][0].replace('VII','7')
+    elif 'VI' in basic_info_dict['construct_type'][0]:
+        basic_info_dict['construct_type'] = basic_info_dict['construct_type'][0].replace('VI', '6')
+    return basic_info_dict
+

@@ -4,3 +4,13 @@ tmpFile/*
 __pypackages__/
 __pycache__/
 .ipynb_checkpoints
+CORE-1/*
+runs/*
+temp/*
+*.md
+*.yaml
+*.sh
+*.pyc
+Dockerfile*
+assets/*
+data/*

@@ -15,21 +15,23 @@ def get_basic_info(image_pil: Image, computervision_client: ComputerVisionClient
     The function `get_basic_info` extracts basic information from a document image using Azure Cognitive
     Services OCR and returns the extracted data in a dictionary format.
     
-    :param image_pil: The `image_pil` parameter is a Pillow image object that contains the basic
-    information of a document. It is used as input to extract text information using OCR (Optical
-    Character Recognition) methods
-    :type image_pil: Image
-    :param computervision_client: The `computervision_client` parameter is likely an instance of the
-    ComputerVisionClient class, which is used for interacting with the Azure Cognitive Services Computer
-    Vision API. This client would be responsible for making requests to the Computer Vision API for
-    tasks such as optical character recognition (OCR) on images to extract
-    :type computervision_client: ComputerVisionClient
-    :return: The function `get_basic_info` returns a dictionary containing the following keys and
-    values:
-    - "construct_type": a list containing the extracted construct type string
-    - "builder_name": a list containing the extracted builder name string
-    - "anken": a list containing the extracted anken string
-    - "ocr": a dictionary with keys "words" and "boxes" containing the OCR results (words and
+    Args:
+        image_pil (Image) : The `image_pil` parameter is a Pillow image object that contains the basic
+        information of a document. It is used as input to extract text information using OCR (Optical
+        Character Recognition) methods
+ 
+        computervision_client (ComputerVisionClient) : The `computervision_client` parameter is likely an instance of the
+        ComputerVisionClient class, which is used for interacting with the Azure Cognitive Services Computer
+        Vision API. This client would be responsible for making requests to the Computer Vision API for
+        tasks such as optical character recognition (OCR) on images to extract
+
+    Return: 
+        The function `get_basic_info` returns a dictionary containing the following keys and
+        values:
+        - "construct_type": a list containing the extracted construct type string
+        - "builder_name": a list containing the extracted builder name string
+        - "anken": a list containing the extracted anken string
+        - "ocr": a dictionary with keys "words" and "boxes" containing the OCR results (words and
     """
     """Get basic information of document
 
@@ -78,10 +80,21 @@ def get_basic_info(image_pil: Image, computervision_client: ComputerVisionClient
         match_anken_str = ' '.join(match_anken.sort_values(by='left').words.tolist())
     except:
         match_anken_str = ''
+    
+    try:
+        number_extract = process.extractOne('号棟', words, scorer= fuzz.WRatio)
+        num_idx = number_extract[2]
+        num_box = boxes[num_idx]
+        _, second_nearest_bbox = find_nearest_and_second_nearest_bbox((num_box[0],num_box[1]), boxes)
+        get_index_second_nearest_bbox = boxes.index(second_nearest_bbox)
+        match_number = int(words[get_index_second_nearest_bbox])
+    except:
+        match_number = ''
 
     return {"construct_type": [construct_type_str],
             "builder_name": [match_builder_name_str],
             "anken": [match_anken_str],
+            "num_S": match_number,
             "ocr": {"words": words, "boxes": boxes}}
 
 
