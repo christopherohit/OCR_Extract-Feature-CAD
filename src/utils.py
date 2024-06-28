@@ -6,21 +6,22 @@ from azure.cognitiveservices.vision.computervision import ComputerVisionClient
 from azure.cognitiveservices.vision.computervision.models import OperationStatusCodes
 import io
 import pandas as pd
-from ultralytics import YOLO
+from ultralytics import YOLO, YOLOv10
 import cv2
-
+from paddleocr import PaddleOCR
+from strhub.data.module import SceneTextDataModule
 import re
 from basicsr.utils import imwrite
+from math import sqrt, pi, cos, sin
+from src.canny import canny_edge_detector
+from collections import defaultdict
 import glob
 import numpy as np
 import os
 from tqdm import tqdm
 import sys
 sys.path.append('/mnt/d/docker_volume/room_of_nhanhuynh/ai_butler/CAD-ShibaSangyo/full_build_from_scratch_nhanhuynh/GFPGAN')
-from gfpgan import GFPGANer
 from src.cor_similar import *
-from basicsr.archs.rrdbnet_arch import RRDBNet
-from realesrgan import RealESRGANer
 
 import math
 import regex
@@ -43,7 +44,6 @@ def load_image(image_path: str) -> Image:
     
     return image_pil
 
-
 def cvrt_point_bb(points: List) -> List:
     """
 
@@ -65,7 +65,6 @@ def cvrt_point_bb(points: List) -> List:
     y_coords = [int(y) for idx, y in enumerate(points) if idx % 2!= 0]
 
     return [min(x_coords), min(y_coords), max(x_coords), max(y_coords)]
-
 
 def ocr_azure_cad(image_pil: Image, computervision_client: ComputerVisionClient) -> Tuple[List, List]:
     def cvrt_point_bb(points):
@@ -110,7 +109,7 @@ def ocr_azure_cad(image_pil: Image, computervision_client: ComputerVisionClient)
     
     return words, boxes
 
-def load_yolo(model_path: str) -> YOLO:
+def load_yolo(model_path: str = '', type_predict: str= ''):
     """
     This Python function loads a YOLO model from a specified path and returns it.
     
@@ -123,10 +122,18 @@ def load_yolo(model_path: str) -> YOLO:
         An instance of the YOLO class initialized with the model located at the specified
         `model_path` is being returned.
     """
+    if type_predict == 'core' or type_predict == 'code':
+        det_model = YOLOv10(model_path)
+        return det_model
+    else:
+        det_model = YOLO(model_path)
+        return det_model
 
-    det_model = YOLO(model_path)
-    
-    return det_model
+def reparse_CAD(result, draw_information):
+    for i in range(len(result['boxes'])):
+        result['boxes'][i] = [result['boxes'][i][0] + draw_information[0],result['boxes'][i][1] + draw_information[1],
+                              result['boxes'][i][2] + draw_information[0],result['boxes'][i][3] + draw_information[1]]
+    return result
 
 def yolo_inference(image_pil: Image, model_detect: YOLO, type: str) -> pd.DataFrame:
 
@@ -153,7 +160,7 @@ def yolo_inference(image_pil: Image, model_detect: YOLO, type: str) -> pd.DataFr
     """
     
     if type == 'code':
-        results = model_detect.predict(source=image_pil, verbose=False)
+        results = model_detect.predict(source=image_pil, verbose=False, conf = 0.6, iou=0.5)
 
         detect_df = pd.DataFrame({"boxes": results[0].boxes.xyxy.tolist(), "cls": results[0].boxes.cls.tolist()})
         detect_df['boxes'] = detect_df['boxes'].apply(lambda x: list(map(int, x)))
@@ -213,7 +220,7 @@ def calc_ovl(box_small: List, box_large: List) -> float:
     except Exception as e:
         print("An error occurred while calculating IoU:", e)
         return 0.
-    
+
 def detect_circle(image_pil: Image, is_display=False) -> List[int]:
     """_summary_
 
@@ -255,12 +262,149 @@ def detect_circle(image_pil: Image, is_display=False) -> List[int]:
             # Display the image with detected circles
             cv2.circle(draw_image, (verify_x, verify_y), verify_r, (255, 0, 0), 2)
             Image.fromarray(draw_image)
-        
+            return circle_box, Image.fromarray(draw_image)
         return circle_box
     else:
         return []
 
+def extract_numbers(input_string):
+    return re.sub(r'\D', '', input_string)
 
+def detect_circle_2(image_pil: Image, name: str = '', path_num: str = '', path_char: str = '', radius_pass: int = 20)->None:
+    uncomfortable = False
+    width, height = image_pil.size
+    # x_center = int(width / 2)
+    draw_image = np.array(image_pil.convert('RGB'))
+    image = np.array(image_pil.convert('L'))
+    
+    if int(width + (width * 0.75)) < int(height) or int(height + (height * 0.75) < width):
+        uncomfortable = True
+    # Blur using 3 * 3 kernel. 
+    gray_blurred = cv2.blur(image, (3, 3)) 
+    
+    # Apply Hough transform on the blurred image. 
+    circles = cv2.HoughCircles(gray_blurred,  
+                    cv2.HOUGH_GRADIENT, 1, 20, param1 = 50, 
+                param2 = 30, minRadius = 1, maxRadius = 40) 
+    # Ensure circles were found
+    if uncomfortable:
+        return 'Error', 'Error'
+    if circles is not None:
+        # Round the circle parameters and convert to integers
+        circles = np.round(circles[0, :]).astype(int).tolist()
+        # max_radius = 0
+        # for radius in circles:
+        #     if radius[2] > max_radius:
+        #         max_radius = radius[2]
+        #         circle_point = radius
+        max_areas = 0
+        crop_main_circle = None
+        x1_crop = None
+        y1_crop = None
+        x2_crop = None
+        y2_crop = None
+        for circle in circles:
+        # Draw detected circles on the original image
+            verify_x, verify_y, verify_r = circle
+            
+            x1 = verify_x - verify_r
+            y1 = verify_y - verify_r
+            x2 = verify_x + verify_r
+            y2 = verify_y + verify_r
+            cropped_circle = draw_image[y1:y2, x1:x2]
+            area_crop = cropped_circle.shape[0] * cropped_circle.shape[1]
+            if area_crop > max_areas:
+                max_areas = area_crop
+                crop_main_circle = cropped_circle
+                x1_crop = x1
+                y1_crop = y1
+                x2_crop = x2
+                y2_crop = y2
+        mask = np.zeros((image_pil.size[0], image_pil.size[1]), dtype=np.uint8)
+        mask[y1_crop:y2_crop,x1_crop:x2_crop] = 255
+        # Inpaint the object
+        inpaint_img = np.copy(image_pil)
+        inpaint_img[y1_crop:y2_crop, x1_crop:x2_crop] = np.mean(inpaint_img[:, :, :], axis=(0, 1))
+        crop_padding = crop_main_circle[0+4:crop_main_circle.shape[0]-4,
+                                        0+4:crop_main_circle.shape[1]-4]
+        cv2.imwrite(f"{path_num}/{name}.png", crop_padding)
+        cv2.imwrite(f"{path_char}/{name}.png", inpaint_img)
+        return f"{path_num}/{name}.png", f"{path_char}/{name}.png"
+    else:
+        # return  f'{name}.png',f'{name}.png'
+        return '', ''
+
+def detect_circle_new(image_pil: Image, name: str = '', path_num: str = '', path_char: str = ''):
+    # Find circles
+    rmin = 15
+    rmax = 40
+    steps = 100
+    threshold = 0.5
+    points = []
+    uncomfortable = False
+    width, height = image_pil.size
+    draw_image = np.array(image_pil.convert('RGB'))
+    if int(width + (width * 0.75)) < int(height) or int(height + (height * 0.75) < width):
+        uncomfortable = True
+
+    if uncomfortable:
+        return 'Error', 'Error'
+    for r in range(rmin, rmax + 1):
+        for t in range(steps):
+            points.append((r, int(r * cos(2 * pi * t / steps)), int(r * sin(2 * pi * t / steps))))
+    acc = defaultdict(int)
+    for x, y in canny_edge_detector(image_pil):
+        for r, dx, dy in points:
+            a = x - dx
+            b = y - dy
+            acc[(a, b, r)] += 1
+    circles = []
+    for k, v in sorted(acc.items(), key=lambda i: -i[1]):
+        x, y, r = k
+        if v / steps >= threshold and all((x - xc) ** 2 + (y - yc) ** 2 > rc ** 2 for xc, yc, rc in circles):
+            print(v / steps, x, y, r)
+            circles.append((x, y, r))
+    
+
+    
+    if len(circles) != 0:
+        max_areas = 0
+        crop_main_circle = None
+        x1_crop = None
+        y1_crop = None
+        x2_crop = None
+        y2_crop = None
+
+        for circle in circles:
+        # Draw detected circles on the original image
+            verify_x, verify_y, verify_r = circle
+            
+            x1 = verify_x - verify_r
+            y1 = verify_y - verify_r
+            x2 = verify_x + verify_r
+            y2 = verify_y + verify_r
+            cropped_circle = draw_image[y1:y2, x1:x2]
+            area_crop = cropped_circle.shape[0] * cropped_circle.shape[1]
+            if area_crop > max_areas:
+                max_areas = area_crop
+                crop_main_circle = cropped_circle
+                x1_crop = x1
+                y1_crop = y1
+                x2_crop = x2
+                y2_crop = y2
+        mask = np.zeros((image_pil.size[0], image_pil.size[1]), dtype=np.uint8)
+        mask[y1_crop:y2_crop,x1_crop:x2_crop] = 255
+        # Inpaint the object
+        inpaint_img = np.copy(image_pil)
+        inpaint_img[y1_crop:y2_crop, x1_crop:x2_crop] = np.mean(inpaint_img[:, :, :], axis=(0, 1))
+        crop_padding = crop_main_circle[0:crop_main_circle.shape[0],
+                                        0:crop_main_circle.shape[1]]
+        cv2.imwrite(f"{path_num}/{name}.png", crop_padding)
+        cv2.imwrite(f"{path_char}/{name}.png", inpaint_img)
+        return f"{path_num}/{name}.png", f"{path_char}/{name}.png"
+    else:
+        # return  f'{name}.png',f'{name}.png'
+        return '', ''
 
 def split_images(raw_image_pil: Image, data_df: pd.DataFrame) -> Tuple[Image.Image, List]:
     """The `split_images` function takes in a raw image (as a PIL Image object) and a DataFrame containing bounding box information. It then splits the image into two parts: a basic image and a list of cropped images.
@@ -384,9 +528,9 @@ def gen_grid_image(draw_image_pil: Image, detect_df: pd.DataFrame, num_cell: int
                 continue
             angle, crop_box = detect_df.loc[det_idx, ['angle', 'boxes']].tolist()
             crop_box = [int(crop_box[0]) - offset,
-                        int(crop_box[1]) - offset,
-                        int(crop_box[2]) + offset +8,
-                        int(crop_box[3]) + offset]
+                        int(crop_box[1]) - offset ,
+                        int(crop_box[2]) + offset +5,
+                        int(crop_box[3]) + offset +5]
             crop_image = draw_image_pil.crop(crop_box)
             crop_image = crop_image.rotate(-angle, expand=True)
             if is_saved == True:
@@ -432,10 +576,8 @@ def get_floor_index(draw_box: List, ocr_dict: Dict) -> str:
     floor_str = regex.findall('\d*', ' '.join(digit_df.words.tolist()))[0]
     return f"{floor_str}F"
 
-
-
 def mapping_code(raw_image_pil: Image, words: List, boxes: List, det_df: pd.DataFrame, 
-                 num_cell: int, cell_width: int, cell_height: int, offset: int=10, is_display: bool=True) -> Dict:
+                 num_cell: int, cell_width: int, cell_height: int, offset: int=5, is_display: bool=False) -> Dict:
     """
     The function `mapping_code` processes image data and OCR results to extract digit codes and
     corresponding notes for each cell in a grid.
@@ -669,7 +811,7 @@ def super_restore_resolution(list_image_path: str, restorer,is_saved: bool = Tru
                                             only_center_face= False,
                                             paste_back= True,
                                             weight= 0.1)
-        return restored_img
+        return Image.fromarray(restored_img)
 
     img_list = sorted(glob.glob(f"{list_image_path}/*"))
     os.makedirs(f"{des_path}", exist_ok=True)
@@ -695,7 +837,6 @@ def super_restore_resolution(list_image_path: str, restorer,is_saved: bool = Tru
                 extension = ext
                 save_restore_path = os.path.join(f'{des_path}', f"{basename}{extension}")
                 imwrite(restored_img, save_restore_path)
-    print("Done")
     return f"{list_image_path}_restore/"
 
 def reformat_code(result: str = ''):
@@ -711,17 +852,6 @@ def convert_parentheses_string_to_int(s: str = ''):
     s = s.strip('()')
     # Convert the remaining string to an integer
     return int(s)
-
-
-# def fill_missing_row(list_original:list = []):
-#     new_list_appending = []
-#     for i in list_original:
-#         component = i.split('|')
-#         stt = convert_parentheses_string_to_int(s=component[0])
-#         if len(new_list_appending) == 0:
-#             new_list_appending.append(stt+'|'+component[1])
-#         else:
-#             for j in new_list_appending:
 
 def fill_missing_elements(data):
     check_duplicate_list = []
@@ -765,7 +895,6 @@ def process_code_cad_1(str_code: str = '', list_sample: list = []):
         print(result)
         return result
 
-
 def process_code_cad_2(str_code: str = '', list_sample: list = []):
     if str_code in list_sample:
         result = reformat_code(str_code)
@@ -779,7 +908,6 @@ def process_code_cad_2(str_code: str = '', list_sample: list = []):
         result = list_sample[id_score_best]
         result = reformat_code(result= result)
         return result
-
 
 def reconfig_list(str_process: list = []) -> Tuple[int,str]:
     """
@@ -800,7 +928,6 @@ def reconfig_list(str_process: list = []) -> Tuple[int,str]:
     idx_int = convert_parentheses_string_to_int(str_process[0])
     code = reformat_code(str_process[1])
     return idx_int, code
-
 
 def upscale_image(image_path: str, restorer,is_saved: bool = True, des_path: str = ''):
 
@@ -864,6 +991,14 @@ def combine_rephrase_dict(dict_result: Dict = {}) -> Dict:
         dict_refine[f"{list_ids[i]}"] = list_code[i]
     return dict_result
 
+def extract_output(model, image: Image):
+    img_transform = SceneTextDataModule.get_transform(model.hparams.img_size)
+    image = img_transform(image).unsqueeze(0)
+    logits = model(image)
+    pred = logits.softmax(-1)
+    label, confidence = model.tokenizer.decode(pred)
+    return label[0]
+
 def combine_rephrase_dict_2(dict_result: Dict = {}) -> Dict:
     """
     (HAVE FILL MISSING !!!!!!!)
@@ -898,18 +1033,17 @@ def combine_rephrase_dict_2(dict_result: Dict = {}) -> Dict:
     list_ids, list_code = zip(*paired_list)
 
     dict_refine = {}
-    min_id = min(list_ids)
+    # min_id = min(list_ids)
     max_id = max(list_ids)
 
-    for i in tqdm(range(min_id, max_id + 1), desc="Refining output"):
+    for i in tqdm(range(1, max_id + 1), desc="Refining output"):
         if i in list_ids:
             dict_refine[i] = list_code[list_ids.index(i)]
         else:
             dict_refine[i] = ""
 
     return dict_refine
-# def save_to_path(file):
-    
+
 def preprocessing_str(basic_info_dict: Dict = {}) -> Dict:
     if 'Ⅶ' in basic_info_dict['construct_type'][0] or 'VII' in basic_info_dict['construct_type'][0]:
         if "Ⅶ" in basic_info_dict['construct_type'][0]:
@@ -919,3 +1053,38 @@ def preprocessing_str(basic_info_dict: Dict = {}) -> Dict:
         basic_info_dict['construct_type'] = basic_info_dict['construct_type'][0].replace('VI', '6')
     return basic_info_dict
 
+def text_detect(image_path: str, path_temp: str, model, parseq_model) -> None:
+    name_file = os.path.basename(image_path)
+    if name_file == '':
+        return 'non-circle', 'non-circle'
+    img = Image.open(image_path)
+    result = model.ocr(image_path, rec= False)
+    if result[0] is None:
+        return '', ''
+    else:
+        # max_areas = 0
+        for idx in range(len(result[0])):
+            text_det = result[0][idx]
+            x1,y1 = text_det[0]
+            x2,y2 = text_det[2]
+            # area = (x2-x1)*(y2-y1)
+            # if area > max_areas:
+            #     max_areas = area
+            word = img.crop((x1,y1,x2,y2))
+            word_recognition = extract_output(parseq_model, word)
+            try:
+                if float(word_recognition):
+                    continue
+            except:
+                word.save(f"{path_temp}/{name_file}")
+                return word_recognition, f"{path_temp}/{name_file}"
+        return '', ''
+    
+def text_recognition(img: Image, model):
+    result = model.ocr(np.array(img.convert('RGB')), det = False, rec = True)
+    if result[0] is None:
+        return ''
+    else:
+        result = result[0][0][0]
+        result = extract_numbers(result)
+        return result

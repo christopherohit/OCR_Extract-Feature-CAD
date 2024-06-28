@@ -4,12 +4,12 @@ import time
 import os
 from src.utils import load_image
 from fastapi.responses import FileResponse
-from src.cad_ocr.ocr_2 import OCR
+from src.cad_ocr.ocr_3 import OCR
 import shutil
 from pdf2image import convert_from_path
 
 main_process = OCR(env_path='.env', gpf_path= 'GFPGAN/experiments/pretrained_models/GFPGANv1.3.pth',
-                   draw_path='weight/best_draw.pt', core_path= 'weight/v10x_1289.pt', dict_path = 'weight/dict.pkl')
+                   draw_path='weight/best_draw.pt', core_path= 'weight/v10x_1280.pt', dict_path = 'weight/dict.pkl')
 
 def check_image(file)-> bool:
     if type(file) == 'PIL.JpegImagePlugin.JpegImageFile' or type(file) == 'PIL.PngImagePlugin.PngImageFile' or type(file):
@@ -52,20 +52,18 @@ async def process(file):
     image_high_resolution = main_process.upscale_image(image_path= file_cache)
     
     print('Extract CAD and Core of it')
-    main_process.extract_draw(image_high_resolution= image_high_resolution)
-    # main_process.extract_code(image_high_resolution= image_high_resolution)
+    main_process.extract_draw(image_high_resolution= file)
+    # list_code = main_process.extract_code(image_high_resolution= image_high_resolution)
 
     print("Progressing OCR ...")
     try:
-        all_char, basic_inform = main_process.processOCR(image_high_res= image_high_resolution)
-    except:
-        print("Error in OCR...\nTry to sleep 3s before recall")
-        time.sleep(3)
-        all_char, basic_inform = main_process.processOCR(image_high_res= image_high_resolution)
-
+        all_char, basic_inform = main_process.processOCR(file, image_high_res= image_high_resolution)
+    except Exception as e:
+        return FileResponse(path= 'export.xlsm',filename='export.xlsx')
+        
     print('Benmark comparing result to dict class ...')
     result_comparing = main_process.calculator_similar(draw_information_list= all_char)
 
     print('Writing result to excel file...')
-    path_result =  main_process.write_to_excel(result_comparing, basic_inform)
+    path_result =  main_process.write_to_excel(result_comparing, basic_inform, using_base_dict= True)
     return FileResponse(path_result, filename='result.xlsx')

@@ -90,7 +90,7 @@ def get_basic_info(image_pil: Image, computervision_client: ComputerVisionClient
         match_number = int(words[get_index_second_nearest_bbox])
     except:
         match_number = ''
-
+    
     return {"construct_type": [construct_type_str],
             "builder_name": [match_builder_name_str],
             "anken": [match_anken_str],
@@ -136,7 +136,7 @@ def ocr_azure_cad(image_pil: Image, computervision_client: ComputerVisionClient)
     
     # Convert the image to bytes
     image_data = io.BytesIO()
-    image_pil.save(image_data, format='JPEG')
+    image_pil.save(image_data, format='PNG')
     image_data.seek(0)
 
     # Perform OCR using Azure Computer Vision

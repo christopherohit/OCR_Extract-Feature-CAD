@@ -1,8 +1,7 @@
 import sys
 from src.utils import load_yolo
 import random
-import google.generativeai as genai
-
+import time
 from dotenv import load_dotenv
 import glob
 import openpyxl
@@ -31,12 +30,13 @@ class OCR():
         self.weight_GPF_path = gpf_path
         self.GFP_GAN_Model = None
         self.yolo_draw_model = load_yolo(draw_path)
-        self.yolo_core_model = load_yolo(core_path)
+        self.yolo_core_model = load_yolo(core_path, type_predict='core')
         self.image_object = None
         self.image_full_size = None
         self.path_temp = 'temp'
         self.path_restore_full = None
         self.path_restore_only_cut = None
+        self.path_gen_grid = None
         self.path_save_original = None
         self.path_single_cad_restore = None
         self.result_draw_df = None
@@ -54,6 +54,10 @@ class OCR():
         print("Azure Computer Vision Client is ready to use!") 
 
     def destroy_all(self) -> None:
+        """
+        The `destroy_all` function deletes specific directories if they exist and contain files.
+        """
+
         print('Detect cache')
         print('Deleting all cache')
         self.path_restore_full = os.path.join(self.path_temp, 'temp_azure_cad')
@@ -61,6 +65,7 @@ class OCR():
         self.path_save_original = os.path.join(self.path_temp, 'temp_original')
         self.path_single_cad = os.path.join(self.path_temp, 'temp_azure_cad_single')
         self.path_single_cad_restore = os.path.join(self.path_temp, 'temp_azure_cad_single_restore')
+        self.path_gen_grid = os.path.join(self.path_temp,'temp_gen_grid')
         if os.path.exists(self.path_restore_full):
             num_file = glob.glob(f'{self.path_restore_full}/*')
             if len(num_file) != 0:
@@ -78,25 +83,40 @@ class OCR():
                 num_file = glob.glob(f'{self.path_single_cad}/*')
                 if len(num_file) != 0:
                     shutil.rmtree(self.path_single_cad)
+        if os.path.exists(self.path_gen_grid):
+            num_file = glob.glob(f'{self.path_gen_grid}/*')
+            if len(num_file) != 0:
+                shutil.rmtree(self.path_gen_grid)
         if os.path.exists(self.dir_result):
             num_file = glob.glob(f'{self.dir_result}/*')
             if len(num_file) != 0:
                 shutil.rmtree(self.dir_result)
 
     def create_all(self) -> None:
+        """
+        The function `create_all` creates multiple directories with specified paths if they do not already
+        exist.
+        """
+        
         os.makedirs(self.path_restore_full, exist_ok= True)
         os.makedirs(self.path_restore_only_cut, exist_ok= True)
         os.makedirs(self.path_save_original, exist_ok= True)
         os.makedirs(self.dir_result, exist_ok= True)
+        os.makedirs(self.path_gen_grid, exist_ok= True)
         if self.is_save_single_cad:
             os.makedirs(self.path_single_cad, exist_ok= True)
             os.makedirs(self.path_single_cad_restore, exist_ok= True)
 
     # Re-init
     def re_init(self) -> None:
+        """
+        The `re_init` function initializes multiple attributes to `None` or empty values in a Python class.
+        """
+
         self.path_restore_full = None
         self.path_restore_only_cut = None
         self.path_save_original = None
+        self.path_gen_grid = None
         self.image_object = None
         self.result_draw_df = None
         self.image_full_size = None
@@ -109,6 +129,17 @@ class OCR():
         self.dir_result = 'result/'
 
     def save_pil_to_file(self,pil_image: Image) -> str:
+        """
+        The function `save_pil_to_file` saves a PIL image to a file and returns the path to the saved file.
+        
+        Args:
+            pil_image (Image) : The `pil_image` parameter in the `save_pil_to_file` method is expected to be an
+            instance of the `Image` class. This parameter represents the PIL (Python Imaging Library) image that
+            you want to save to a file
+
+        Return: 
+            The function `save_pil_to_file` returns the path where the PIL image is saved as a PNG file.
+        """
         path_to_save = os.path.join(self.path_save_original,'temp_original_file.png')
         pil_image.save(path_to_save)
         return path_to_save
@@ -160,7 +191,7 @@ class OCR():
         
     def extract_code(self, image_high_resolution:Image):
         image_high_resolution_extract = image_high_resolution.copy()
-        self.raw_code_df = yolo_inference(image_high_resolution_extract,
+        self.result_code_df = yolo_inference(image_high_resolution_extract,
                                                self.yolo_core_model,
                                                type= 'code')
     
@@ -168,18 +199,22 @@ class OCR():
         draw_information_list = {}
         base_image_pil, draw_location_list = split_images(image_high_res.copy(), self.result_draw_df)
         base_info = get_basic_info(base_image_pil, self.computervision_client)
+        print(draw_location_list)
         for idx, draw_location in enumerate(draw_location_list):
             floor_str = str(idx)
-            code_df = self.raw_code_df[self.raw_code_df.boxes.apply(lambda b: calc_ovl(b, draw_location) > 0.4)]
+            code_df = self.result_code_df[self.result_code_df.boxes.apply(lambda b: calc_ovl(b, draw_location) > 0.5)]
             code_df.reset_index(drop=True, inplace=True)
+            print(len(code_df['boxes']))
             num_cell, cell_width, cell_height = get_cell_size(code_df)
             num_cell = int(num_cell)
             concat_image_pil = gen_grid_image(image_high_res, code_df, num_cell, cell_width, cell_height)
+            concat_image_pil.save(os.path.join(self.path_gen_grid,f'gen_{idx}.png'))
             draw_words, draw_boxes = ocr_azure_cad(concat_image_pil.copy(), self.computervision_client)
             extract_dict = mapping_code(image_high_res, draw_words, draw_boxes, code_df,
                                         num_cell, cell_width, cell_height)
             extract_dict = combine_rephrase_dict_2(extract_dict)
             draw_information_list[int(floor_str)] = extract_dict
+            time.sleep(2)
         return draw_information_list, base_info
     
     def calculator_similar(self, draw_information_list:Dict|List):
@@ -200,9 +235,9 @@ class OCR():
         list_infor_cad = {}
         for idx_cad in range(len(draw_information_list)):
             list_infor_cad[idx_cad] = []
-            for idx_core, core in draw_information_list[idx_cad+1].items():
+            for idx_core, core in draw_information_list[idx_cad].items():
                 if core == '':
-                    core = 'A'
+                    core = ''
                 
                 if core in self.dict_class:
                     result = core
@@ -217,9 +252,30 @@ class OCR():
                 list_infor_cad[idx_cad].append(result)
         return list_infor_cad
     
+    def clear_all_excel(self)->None:
+        print("="*12,"Clean Cache in Excel File","="*12)
+        self.excel['E3'] = ''
+        self.excel['E4'] = ''
+        self.excel['B3'] = ''
+        self.excel['G3'] = ''
+        start_from = 8
+        to_end = 57
+        for i in range(start_from, to_end+1):
+            self.excel[f'C{i}'] = ''
+            self.excel[f'D{i}'] = ''
+            self.excel[f'O{i}'] = ''
+            self.excel[f'P{i}'] = ''
+            self.excel[f'AB{i}'] = ''
+            self.excel[f'AC{i}'] = ''
+            self.workbook.save('export.xlsm')
+
     def write_to_excel(self, draw_information_list: Dict = {}, base_info: Dict = {})->str:
+        
         base_info = preprocessing_str(basic_info_dict= base_info)
-        self.excel['E3'] = base_info['construct_type'][0]
+        try:
+            self.excel['E3'] = base_info['construct_type']
+        except:
+            self.excel['E3'] = base_info['construct_type'][0]
         self.excel['E4'] = base_info['num_S']
         self.excel['B3'] = base_info['builder_name'][0]
         self.excel['G3'] = base_info['anken'][0]
@@ -227,25 +283,25 @@ class OCR():
         for idx_cad in tqdm(range(len(draw_information_list))):
             start_from = 8
             if idx_cad == 0:
-                for idx,core_fill in draw_information_list[idx_cad].items():
+                for core_fill in draw_information_list[idx_cad]:
                     self.excel[f'C{start_from}'] = core_fill
                     if core_fill.startswith('K') or core_fill.startswith('M') or core_fill.startswith('SH'):
                         self.excel[f'D{start_from}'] = '上\n下'
                     start_from = start_from + 1
                 self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
             elif idx_cad == 1:
-                for idx,core_fill in draw_information_list[idx_cad].items():
+                for core_fill in draw_information_list[idx_cad]:
                     self.excel[f'O{start_from}'] = core_fill
                     if core_fill.startswith('K') or core_fill.startswith('M') or core_fill.startswith('SH'):
                         self.excel[f'P{start_from}'] = '上\n下'
-                        start_from = start_from + 1
+                    start_from = start_from + 1
                 self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
             elif idx_cad == 2:
-                for idx,core_fill in draw_information_list[idx_cad].items():
+                for core_fill in draw_information_list[idx_cad]:
                     self.excel[f'AB{start_from}'] = core_fill
                     if core_fill.startswith('K') or core_fill.startswith('M') or core_fill.startswith('SH'):
                         self.excel[f'AC{start_from}'] = '上\n下'
-                        start_from = start_from + 1
+                    start_from = start_from + 1
                 self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
         # self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
         return os.path.join(self.dir_result, 'result.xlsx')
