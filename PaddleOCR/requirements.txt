@@ -1,0 +1,14 @@
+shapely
+scikit-image
+imgaug
+pyclipper
+lmdb
+tqdm
+numpy<2.0
+rapidfuzz
+opencv-python
+opencv-contrib-python
+cython
+Pillow
+pyyaml
+requests

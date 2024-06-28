@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  shiba:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    restart: always
+    # volumes:
+    #   - ./volumes:/home/apprunner/
+    ports:
+      - "8962:8962"
