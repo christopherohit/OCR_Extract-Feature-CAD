@@ -90,11 +90,7 @@ def get_basic_info(image_pil: Image, computervision_client: ComputerVisionClient
         match_number = int(words[get_index_second_nearest_bbox])
     except:
         match_number = ''
-<<<<<<< HEAD
     
-=======
-
->>>>>>> 88a51bf5a255602a6f5f37d3435bfbe3e834db5b
     return {"construct_type": [construct_type_str],
             "builder_name": [match_builder_name_str],
             "anken": [match_anken_str],
