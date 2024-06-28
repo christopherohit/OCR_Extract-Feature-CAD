@@ -1,0 +1,4 @@
+-c ${CONSTRAINTS}
+
+hydra-core >=1.2.0
+fvcore

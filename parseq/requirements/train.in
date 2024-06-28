@@ -1,0 +1,7 @@
+-c ${CONSTRAINTS}
+
+lmdb
+Pillow
+imgaug
+hydra-core >=1.2.0
+tensorboardx

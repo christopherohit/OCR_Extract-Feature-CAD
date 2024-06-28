@@ -1,0 +1,5 @@
+-c ${CONSTRAINTS}
+
+lmdb
+Pillow
+tqdm
