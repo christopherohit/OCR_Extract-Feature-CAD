@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from src.cad_ocr.ocr_3 import OCR
 from src.utils import load_image
 from fastapi.responses import FileResponse
@@ -8,6 +9,17 @@ main_process = OCR(env_path='.env', gpf_path= 'GFPGAN/experiments/pretrained_mod
 
 
 file = 'assets/outfile.png'
+=======
+from src.cad_ocr.ocr import OCR
+from src.utils import load_image
+import time
+
+main_process = OCR(env_path='.env', gpf_path= 'GFPGAN/experiments/pretrained_models/GFPGANv1.3.pth',
+                   draw_path='weight/best_draw.pt', core_path= 'weight/best_code.pt', dict_path = 'weight/dict.pkl')
+
+
+file = 'outfile5.png'
+>>>>>>> 88a51bf5a255602a6f5f37d3435bfbe3e834db5b
 image = load_image(file)
 print('Starting config CAD')
 main_process.destroy_all()
@@ -19,6 +31,7 @@ print('Save PIL to cache file done')
 print('Start Image resolution')
 image_high_resolution = main_process.upscale_image(image_path= file_cache)
 print('Extract CAD and Core of it')
+<<<<<<< HEAD
 main_process.extract_draw(image_high_resolution= image)
 # list_code = main_process.extract_code(image_high_resolution= image)
 
@@ -35,3 +48,16 @@ all_char, basic_inform = main_process.processOCR(image , image_high_res= image_h
 # result_comparing = main_process.calculator_similar(draw_information_list= all_char)
 print('Writing result to excel file...')
 path_result =  main_process.write_to_excel(all_char, basic_inform, using_base_dict= False)
+=======
+main_process.extract_draw(image_high_resolution= image_high_resolution)
+main_process.extract_code(image_high_resolution= image_high_resolution)
+
+print("Progressing OCR ...")
+try:
+    all_char, basic_inform = main_process.processOCR(image_high_res= image_high_resolution)
+    print('')
+except:
+    print("Error in OCR...\nTry to sleep 3s before recall")
+    time.sleep(3)
+    all_char, basic_inform = main_process.processOCR(image_high_res= image_high_resolution)
+>>>>>>> 88a51bf5a255602a6f5f37d3435bfbe3e834db5b

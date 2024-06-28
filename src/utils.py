@@ -577,7 +577,7 @@ def get_floor_index(draw_box: List, ocr_dict: Dict) -> str:
     return f"{floor_str}F"
 
 def mapping_code(raw_image_pil: Image, words: List, boxes: List, det_df: pd.DataFrame, 
-                 num_cell: int, cell_width: int, cell_height: int, offset: int=5, is_display: bool=False) -> Dict:
+                 num_cell: int, cell_width: int, cell_height: int, offset: int=10, is_display: bool=True) -> Dict:
     """
     The function `mapping_code` processes image data and OCR results to extract digit codes and
     corresponding notes for each cell in a grid.
@@ -947,6 +947,7 @@ def upscale_image(image_path: str, restorer,is_saved: bool = True, des_path: str
     
     if restored_img is not None:
         if ext == 'auto':
+            extension = 'jpg'
             extension = 'jpg'
         else:
             extension = ext
