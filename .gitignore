@@ -17,3 +17,5 @@ weight/*
 
 venv
 temp
+temp/temp_azure_cad/*
+temp/temp_original/*
