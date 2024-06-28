@@ -1,10 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.responses import FileResponse
-import uvicorn
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
-import sys
-from src.cad_ocr.ocr import OCR
 from api_core.ocr_api import process
 
 
@@ -16,7 +13,7 @@ async def read_root():
     message = 'Hello World,  From FastAPI running on Uvicorn with Gunicorn'
     return {"message":message}
 
-@app.post('/OCR_CAD', response_class=FileResponse)
+@app.post('/ocr-cad', response_class=FileResponse)
 async def OCR_CAD(file: UploadFile = File(...)):
     return await process(file= file)
 

@@ -11,7 +11,8 @@ temp/*
 *.yaml
 *.sh
 *.pyc
-Dockerfile*
 assets/*
 data/*
 weight/*
+
+venv

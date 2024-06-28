@@ -1,0 +1,11 @@
+__pycache__
+tmpFile
+assets
+CORE-1
+data
+runs
+# weight/*
+# gfpgan/*
+# GFPGAN/experiments/*
+doctr
+PaddleOCR
