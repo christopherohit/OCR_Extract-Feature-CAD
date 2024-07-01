@@ -32,6 +32,6 @@ all_char, basic_inform = main_process.processOCR(image , image_high_res= image_h
 
 
 
-# result_comparing = main_process.calculator_similar(draw_information_list= all_char)
+result_comparing = main_process.calculator_similar(draw_information_list= all_char)
 print('Writing result to excel file...')
-path_result =  main_process.write_to_excel(all_char, basic_inform, using_base_dict= False)
+path_result =  main_process.write_to_excel(result_comparing, basic_inform, using_base_dict= True)

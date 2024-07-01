@@ -244,6 +244,8 @@ class OCR():
     def extract_draw(self, image_high_resolution:Image):
         def get_left(bbox):
             return bbox[0]
+        def get_bottom(bbox):
+            return bbox[1]
         image_high_resolution_extract = image_high_resolution.copy()
         result_draw_df = yolo_inference(image_high_resolution_extract,
                                         self.yolo_draw_model,
@@ -251,6 +253,33 @@ class OCR():
         
         result_draw_df['xmin'] = result_draw_df['boxes'].apply(get_left)
         self.result_draw_df = result_draw_df.sort_values(by='xmin').drop(columns='xmin').reset_index(drop=True)
+        if len(self.result_draw_df['boxes']) > 2:
+            position = []
+            for i in range(len(self.result_draw_df['boxes'])):
+                if len(position) == 2 and 1 not in position:
+                    position.append(1)
+                    break
+                elif len(position) == 2 and 2 not in position:
+                    position.append(2)
+                    break
+                elif len(position) == 2 and 3 not in position:
+                    position.append(3)
+                    break
+                else:
+                    if abs(get_left(self.result_draw_df['boxes'][i]) - get_left(self.result_draw_df['boxes'][i+1])) > 400:
+                        if get_left(self.result_draw_df['boxes'][i]) < get_left(self.result_draw_df['boxes'][i+1]):
+                            position.append(2)
+                        else:
+                            position.append(3)
+                    else:
+                        if get_bottom(self.result_draw_df['boxes'][i]) < get_bottom(self.result_draw_df['boxes'][i]):
+                            position.append(2)
+                        else:
+                            position.append(1)
+            self.result_draw_df['position'] = position
+            self.result_draw_df = self.result_draw_df.sort_values(by='position').drop(columns='position').reset_index(drop= True)
+
+
         # if self.is_save_single_cad:
         #     count = 0
         #     for temp in self.result_draw_df.boxes:
@@ -275,7 +304,7 @@ class OCR():
         base_info = get_basic_info(base_image_pil, self.computervision_client)
         self.extract_draw(image_high_res)
         _, draw_location_list = split_images(image_high_res.copy(), self.result_draw_df)
-
+        
         for idx, draw_location in enumerate(draw_location_list):
 
             floor_str = str(idx)
@@ -323,6 +352,7 @@ class OCR():
                 
             
             code_img = image_high_res.crop(draw_location)
+            code_img.save(f'{self.path_restore_only_cut}/{floor_str}.png')
             print('Done almost')
             code_df = yolo_inference(code_img,
                                      self.yolo_core_model,
@@ -381,6 +411,8 @@ class OCR():
                     num = extract_output(self.model_parseq, image_num)
                     try:
                         num = int(num)
+                        if num >= 48:
+                            num = text_recognition(image_num)
                         list_num.append(int(num))
                         list_char.append(word)
                     except:
@@ -521,4 +553,3 @@ class OCR():
                     self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
             # self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
             return os.path.join(self.dir_result, 'result.xlsx')
-

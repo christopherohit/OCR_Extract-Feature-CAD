@@ -168,7 +168,7 @@ def yolo_inference(image_pil: Image, model_detect: YOLO, type: str) -> pd.DataFr
     else:
 
 
-        results = model_detect.predict(source=image_pil, verbose=False, conf = 0.7)
+        results = model_detect.predict(source=image_pil, verbose=False, conf = 0.6)
 
         detect_df = pd.DataFrame({"boxes": results[0].boxes.xyxy.tolist(), "cls": results[0].boxes.cls.tolist()})
         detect_df['boxes'] = detect_df['boxes'].apply(lambda x: list(map(int, x)))
@@ -339,7 +339,7 @@ def detect_circle_new(image_pil: Image, name: str = '', path_num: str = '', path
     rmin = 15
     rmax = 40
     steps = 100
-    threshold = 0.5
+    threshold = 0.6
     points = []
     uncomfortable = False
     width, height = image_pil.size
