@@ -7,7 +7,7 @@ main_process = OCR(env_path='.env', gpf_path= 'GFPGAN/experiments/pretrained_mod
                    draw_path='weight/best_draw.pt', core_path= 'weight/v10x_1280.pt', dict_path = 'weight/dict.pkl')
 
 
-file = 'assets/outfile.png'
+file = 'assets/sample-04.png'
 image = load_image(file)
 print('Starting config CAD')
 main_process.destroy_all()

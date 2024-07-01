@@ -1046,6 +1046,18 @@ def combine_rephrase_dict_2(dict_result: Dict = {}) -> Dict:
     return dict_refine
 
 def preprocessing_str(basic_info_dict: Dict = {}) -> Dict:
+    """
+    This Python function preprocesses a dictionary containing construction type information by replacing
+    Roman numerals with their corresponding Arabic numerals.
+    
+    :param basic_info_dict: The function `preprocessing_str` takes a dictionary `basic_info_dict` as
+    input and performs some preprocessing on the value associated with the key 'construct_type' in the
+    dictionary. The function checks if the value contains certain Roman numerals ('Ⅶ' or 'VII', 'VI')
+    and
+    :type basic_info_dict: Dict
+    :return: The function `preprocessing_str` is returning the `basic_info_dict` after performing some
+    preprocessing on the 'construct_type' key based on certain conditions.
+    """
     if 'Ⅶ' in basic_info_dict['construct_type'][0] or 'VII' in basic_info_dict['construct_type'][0]:
         if "Ⅶ" in basic_info_dict['construct_type'][0]:
             basic_info_dict['construct_type'][0] = basic_info_dict['construct_type'][0].replace('Ⅶ', 'VII')
@@ -1055,6 +1067,30 @@ def preprocessing_str(basic_info_dict: Dict = {}) -> Dict:
     return basic_info_dict
 
 def text_detect(image_path: str, path_temp: str, model, parseq_model) -> None:
+    """
+    This function takes an image path, model, and parseq_model as input, performs optical character
+    recognition (OCR) on the image, extracts text regions, and saves the recognized text along with
+    corresponding image regions to a temporary path.
+    
+    :param image_path: The `image_path` parameter is a string that represents the file path to the image
+    file that you want to process for text detection. This function seems to be designed to extract text
+    from images using OCR (Optical Character Recognition) and then perform some processing on the
+    detected text
+    :type image_path: str
+    :param path_temp: `path_temp` is a string parameter that represents the path where temporary files
+    will be saved during the execution of the `text_detect` function
+    :type path_temp: str
+    :param model: The `model` parameter in the `text_detect` function seems to be used for optical
+    character recognition (OCR) on the input image. It is likely an object or instance of a class that
+    has an `ocr` method used to extract text from the image
+    :param parseq_model: The `parseq_model` parameter in the `text_detect` function seems to be a model
+    used for word recognition or parsing. It is likely a model that takes an image of a word as input
+    and outputs the recognized text or some other relevant information about the word
+    :return: The function `text_detect` returns a tuple containing two values. The first value is the
+    word recognition result, and the second value is the path where the cropped word image is saved. If
+    no word recognition is found, or if there are any issues during the process, empty strings are
+    returned for both values.
+    """
     name_file = os.path.basename(image_path)
     if name_file == '':
         return 'non-circle', 'non-circle'
@@ -1068,6 +1104,10 @@ def text_detect(image_path: str, path_temp: str, model, parseq_model) -> None:
             text_det = result[0][idx]
             x1,y1 = text_det[0]
             x2,y2 = text_det[2]
+            if x1>y2:
+                print("Hello Bugs are there")
+            if y1>y2:
+                print("Hello Bugs are there")
             # area = (x2-x1)*(y2-y1)
             # if area > max_areas:
             #     max_areas = area

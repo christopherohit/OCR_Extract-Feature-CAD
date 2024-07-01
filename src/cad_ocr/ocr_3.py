@@ -253,32 +253,42 @@ class OCR():
         
         result_draw_df['xmin'] = result_draw_df['boxes'].apply(get_left)
         self.result_draw_df = result_draw_df.sort_values(by='xmin').drop(columns='xmin').reset_index(drop=True)
+        
         if len(self.result_draw_df['boxes']) > 2:
-            position = []
-            for i in range(len(self.result_draw_df['boxes'])):
-                if len(position) == 2 and 1 not in position:
-                    position.append(1)
-                    break
-                elif len(position) == 2 and 2 not in position:
-                    position.append(2)
-                    break
-                elif len(position) == 2 and 3 not in position:
-                    position.append(3)
-                    break
-                else:
-                    if abs(get_left(self.result_draw_df['boxes'][i]) - get_left(self.result_draw_df['boxes'][i+1])) > 400:
-                        if get_left(self.result_draw_df['boxes'][i]) < get_left(self.result_draw_df['boxes'][i+1]):
-                            position.append(2)
-                        else:
-                            position.append(3)
-                    else:
-                        if get_bottom(self.result_draw_df['boxes'][i]) < get_bottom(self.result_draw_df['boxes'][i]):
-                            position.append(2)
-                        else:
-                            position.append(1)
-            self.result_draw_df['position'] = position
-            self.result_draw_df = self.result_draw_df.sort_values(by='position').drop(columns='position').reset_index(drop= True)
 
+            max_y1 = max(row[1] for row in self.result_draw_df['boxes'])
+            min_y1 = min(row[1] for row in self.result_draw_df['boxes'])
+            if max_y1 - min_y1 >500:
+                max_y1_index = [i for i, row in enumerate(self.result_draw_df['boxes']) if row[1] == max(row[1] for row in self.result_draw_df['boxes'])][0]
+                result_draw_df['xmin'][max_y1_index] = 0
+                for i in range(len(self.result_draw_df['boxes'])):
+                    if i == 0:
+    
+                        if self.result_draw_df['boxes'][i][1] == max_y1:
+                            continue
+                        else:
+                            if self.result_draw_df['boxes'][i+1][1] == max_y1:
+                                if get_left(self.result_draw_df['boxes'][i]) < get_left(self.result_draw_df['boxes'][i+2]):
+                                    result_draw_df['xmin'][i] = 1
+                                    result_draw_df['xmin'][i+2] = 2
+                                else:
+                                    result_draw_df['xmin'][i] = 2
+                                    result_draw_df['xmin'][i+2] = 1
+                                break
+                            else:
+                                if get_left(self.result_draw_df['boxes'][i]) < get_left(self.result_draw_df['boxes'][i+1]):
+                                    result_draw_df['xmin'][i] = 1
+                                    result_draw_df['xmin'][i+1] = 2
+                                else:
+                                    result_draw_df['xmin'][i] = 2
+                                    result_draw_df['xmin'][i+1] = 1
+                                break
+                self.result_draw_df = result_draw_df.sort_values(by='xmin').drop(columns='xmin').reset_index(drop=True)
+            else:
+                self.result_draw_df = result_draw_df.sort_values(by='xmin').drop(columns='xmin').reset_index(drop=True)
+
+
+        
 
         # if self.is_save_single_cad:
         #     count = 0
@@ -361,6 +371,7 @@ class OCR():
             # code_df.reset_index(drop=True, inplace=True)
             num_cell, cell_width, cell_height = get_cell_size(code_df)
             num_cell = int(num_cell)
+            
             code_df = reparse_CAD(code_df, draw_location)
             concat_image_pil = gen_grid_image(image_high_res, code_df, num_cell, cell_width, cell_height, is_saved= True, path_save= path_save)
             concat_image_pil.save(os.path.join(self.path_gen_grid,f'gen_{idx}.png'))
