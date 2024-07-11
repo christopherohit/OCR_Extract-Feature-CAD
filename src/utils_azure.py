@@ -8,7 +8,8 @@ import pandas as pd
 import os
 from src.utils import *
 from msrest.authentication import CognitiveServicesCredentials
-
+from azure.core.credentials import AzureKeyCredential
+from azure.ai.formrecognizer import DocumentAnalysisClient
 
 def get_basic_info(image_pil: Image, computervision_client: ComputerVisionClient) -> Dict:
     """
@@ -235,3 +236,39 @@ def public_ocr_cad_apis(image_path: str,  det_draw_model: YOLO, det_code_model: 
 
 def process_by_batch_size():
     pass
+
+def di_azure_ocr(img_byte_arr: bytes,
+                 document_analysis_client,
+                 remove_check_box=True):
+
+    # Call Azure API
+    poller = document_analysis_client.begin_analyze_document("prebuilt-read", document=img_byte_arr)
+    result = poller.result()
+    result_json = result.to_dict()
+
+    # document2d = ocr2structured_text(result_json)
+    
+    if remove_check_box:
+        document = '\n'.join(line['content'].replace(':selected:', '').replace(':unselected:', '')
+                             for line in result_json['pages'][0]['lines'])
+    else:
+        document = '\n'.join(line['content'] for line in result_json['pages'][0]['lines'])
+
+    words = []
+    poly_boxes = []
+    conf_scores = []
+    for line in result_json['pages'][0]['lines']:
+        words.append(line['content'])
+        poly_boxes.append(line['polygon'])
+        line_spans = tuple((line['spans'][0]['offset'], line['spans'][0]['offset'] + line['spans'][0]['length']))
+        confidence = min([word['confidence'] for word in result_json['pages'][0]['words']
+                          if line_spans[0] <= word['span']['offset'] < line_spans[1]])
+        conf_scores.append(confidence)
+    bboxes = []
+    for box in poly_boxes:
+        x_coords = [point['x'] for point in box]
+        y_coords = [point['y'] for point in box]
+        x_min, x_max = int(min(x_coords)), int(max(x_coords))
+        y_min, y_max = int(min(y_coords)), int(max(y_coords))
+        bboxes.append([x_min, y_min, x_max, y_max])
+    return  words, bboxes

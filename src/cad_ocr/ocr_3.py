@@ -15,6 +15,8 @@ from basicsr.archs.rrdbnet_arch import RRDBNet
 from realesrgan import RealESRGANer
 import shutil
 from gfpgan import GFPGANer
+from azure.core.credentials import AzureKeyCredential
+from azure.ai.formrecognizer import DocumentAnalysisClient
 import pickle
 import torch
 
@@ -23,6 +25,9 @@ class OCR():
         load_dotenv(env_path)
         self.subscription_key = os.environ['AZURE_SHIBA_SUBSCRIPTION_KEY']
         self.endpoint = os.environ['AZURE_SHIBA_ENDPOINT_KEY']
+        self.subscription_key_di = os.environ['DI_AZURE_SUBSCRIPTION_KEY']
+        self.endpoint_di = os.environ['DI_AZURE_ENDPOINT_KEY']
+        self.document_analysis_client = DocumentAnalysisClient(endpoint=self.endpoint_di, credential=AzureKeyCredential(self.subscription_key_di))
         self.computervision_client = ComputerVisionClient(self.endpoint, CognitiveServicesCredentials(self.subscription_key))
         self.weight_GPF_path = gpf_path
         self.GFP_GAN_Model = None
@@ -244,8 +249,6 @@ class OCR():
     def extract_draw(self, image_high_resolution:Image):
         def get_left(bbox):
             return bbox[0]
-        def get_bottom(bbox):
-            return bbox[1]
         image_high_resolution_extract = image_high_resolution.copy()
         result_draw_df = yolo_inference(image_high_resolution_extract,
                                         self.yolo_draw_model,
@@ -363,7 +366,7 @@ class OCR():
             
             code_img = image_high_res.crop(draw_location)
             code_img.save(f'{self.path_restore_only_cut}/{floor_str}.png')
-            print('Done almost')
+
             code_df = yolo_inference(code_img,
                                      self.yolo_core_model,
                                      type= 'code')
@@ -374,9 +377,10 @@ class OCR():
             
             code_df = reparse_CAD(code_df, draw_location)
             concat_image_pil = gen_grid_image(image_high_res, code_df, num_cell, cell_width, cell_height, is_saved= True, path_save= path_save)
+            concat_image_pil = concat_image_pil.resize((1280,1280))
             concat_image_pil.save(os.path.join(self.path_gen_grid,f'gen_{idx}.png'))
+            concat_image_pil
 
-            
             list_image_word = []
             list_image_num = []
             if self.is_double_restore:
@@ -422,30 +426,35 @@ class OCR():
                     num = extract_output(self.model_parseq, image_num)
                     try:
                         num = int(num)
-                        if num >= 48:
-                            num = text_recognition(image_num)
+                        if num > 50:
+                            num = text_recognition(img = image_num, 
+                                                   model = self.paddle_model,
+                                                   get_num_only= True)
                         list_num.append(int(num))
                         list_char.append(word)
                     except:
                         try:
-                            num = text_recognition(image_num)
+                            num = text_recognition(img = image_num,
+                                                   model= self.paddle_model,
+                                                   get_num_only= True)
                             list_num.append(int(num))
                             list_char.append(word)
                         except:
                             continue
             extract_dict = {'digit_code': list_num,
                             'code': list_char}
-            # print(type(concat_image_pil))
-            # draw_words, draw_boxes = ocr_azure_cad(concat_image_pil.copy(), self.computervision_client)
-            # extract_dict = mapping_code(image_high_res, draw_words, draw_boxes, code_df,
-            #                             num_cell, cell_width, cell_height)
             extract_dict = combine_rephrase_dict_2(extract_dict)
             draw_information_list[int(floor_str)] = extract_dict
             
-            # draw_words, draw_boxes = ocr_azure_cad(concat_image_pil.copy(), self.computervision_client)
-            # extract_dict = mapping_code(image_high_res, draw_words, draw_boxes, code_df,
-            #                             num_cell, cell_width, cell_height)
-            # extract_dict = combine_rephrase_dict_2(extract_dict)
+            # Upgrade version            with open(os.path.join(self.path_gen_grid,f'gen_{idx}.png'), mode = 'rb') as file:
+                img_byte_arr = file.read()
+
+            
+            draw_words, draw_boxes = ocr_azure_cad(concat_image_pil.copy(), self.computervision_client)
+            extract_dict_inference = mapping_code(image_high_res, draw_words, draw_boxes, code_df,
+                                                  num_cell, cell_width, cell_height, is_display= False)
+            extract_dict_inference = combine_rephrase_dict_2(extract_dict_inference)
+
             # draw_information_list[int(floor_str)] = extract_dict
         return draw_information_list, base_info
     
@@ -501,7 +510,7 @@ class OCR():
             self.excel[f'AC{i}'] = ''
             self.workbook.save('export.xlsm')
 
-    def write_to_excel(self, draw_information_list: Dict = {}, base_info: Dict = {}, using_base_dict: bool = False)->str:
+    def write_to_excel(self, draw_information_list: Dict = {}, base_info: Dict = {}, using_base_dict: bool = False, name: str = 'result.xlsx')->str:
         
         base_info = preprocessing_str(basic_info_dict= base_info)
         try:
@@ -521,23 +530,23 @@ class OCR():
                         if core_fill.startswith('K') or core_fill.startswith('M') or core_fill.startswith('SH'):
                             self.excel[f'D{start_from}'] = '上\n下'
                         start_from = start_from + 1
-                    self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
+                    self.workbook.save(os.path.join(self.dir_result, name))
                 elif idx_cad == 1:
                     for core_fill in draw_information_list[idx_cad]:
                         self.excel[f'O{start_from}'] = core_fill
                         if core_fill.startswith('K') or core_fill.startswith('M') or core_fill.startswith('SH'):
                             self.excel[f'P{start_from}'] = '上\n下'
                         start_from = start_from + 1
-                    self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
+                    self.workbook.save(os.path.join(self.dir_result, name))
                 elif idx_cad == 2:
                     for core_fill in draw_information_list[idx_cad]:
                         self.excel[f'AB{start_from}'] = core_fill
                         if core_fill.startswith('K') or core_fill.startswith('M') or core_fill.startswith('SH'):
                             self.excel[f'AC{start_from}'] = '上\n下'
                         start_from = start_from + 1
-                    self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
-            # self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
-            return os.path.join(self.dir_result, 'result.xlsx')
+                    self.workbook.save(os.path.join(self.dir_result, name))
+            # self.workbook.save(os.path.join(self.dir_result, name))
+            return os.path.join(self.dir_result, name)
         else:
             for idx_cad in tqdm(range(len(draw_information_list))):
                 start_from = 8
@@ -547,20 +556,20 @@ class OCR():
                         if core_fill.startswith('K') or core_fill.startswith('M') or core_fill.startswith('SH'):
                             self.excel[f'D{start_from}'] = '上\n下'
                         start_from = start_from + 1
-                    self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
+                    self.workbook.save(os.path.join(self.dir_result, name))
                 elif idx_cad == 1:
                     for idxcore, core_fill in draw_information_list[idx_cad].items():
                         self.excel[f'O{start_from}'] = core_fill
                         if core_fill.startswith('K') or core_fill.startswith('M') or core_fill.startswith('SH'):
                             self.excel[f'P{start_from}'] = '上\n下'
                         start_from = start_from + 1
-                    self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
+                    self.workbook.save(os.path.join(self.dir_result, name))
                 elif idx_cad == 2:
                     for idxcore, core_fill in draw_information_list[idx_cad].items():
                         self.excel[f'AB{start_from}'] = core_fill
                         if core_fill.startswith('K') or core_fill.startswith('M') or core_fill.startswith('SH'):
                             self.excel[f'AC{start_from}'] = '上\n下'
                         start_from = start_from + 1
-                    self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
-            # self.workbook.save(os.path.join(self.dir_result, 'result.xlsx'))
-            return os.path.join(self.dir_result, 'result.xlsx')
+                    self.workbook.save(os.path.join(self.dir_result, name))
+            # self.workbook.save(os.path.join(self.dir_result, name))
+            return os.path.join(self.dir_result, name)

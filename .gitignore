@@ -4,7 +4,7 @@ tmpFile/*
 __pypackages__/
 __pycache__/
 .ipynb_checkpoints
-CORE-1/*
+CORE*
 runs/*
 temp/*
 *.md
@@ -14,6 +14,7 @@ temp/*
 assets/*
 data/*
 weight/*
+cache/*
 
 venv
 temp
